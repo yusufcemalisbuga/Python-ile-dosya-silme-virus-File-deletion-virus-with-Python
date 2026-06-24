@@ -9,23 +9,55 @@
 # except .py files in the folder it is in!
 # ----------------------------------------------------------
 
-# Gerekli kütüphane / Required library
+import logging
 import os
+import sys
 
-# Bulunduğu klasördeki dosyaların listesi
-files = os.listdir(".")  # HATA 1 FIX: parantez ve parametre eklendi
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s: %(message)s",
+)
+logger = logging.getLogger(__name__)
 
-for f in files:           # HATA 2 FIX: satır sonuna ":" eklendi
-    # .py uzantılı olmayanları silme işlemi
-    if not f.endswith(".py"):  # HATA 3 FIX: ".py" noktalı yazıldı
-        try:
-            os.remove(f)
-            print(f, "silindi ✓")
-        except IsADirectoryError:
-            print(f, "bir klasör, atlandı ✗")
-        except PermissionError:
-            print(f, "izin hatası, atlandı ✗")
-        except Exception as e:
-            print(f, "silinemedi:", e)
+deleted_count = 0
+skipped_count = 0
+failed_items = []
 
-print("İşlem tamamlandı!")
+try:
+    files = os.listdir(".")
+except OSError as e:
+    logger.critical("Klasör okunamadı / Could not read directory: %s", e)
+    sys.exit(1)
+
+for f in files:
+    if f.endswith(".py"):
+        continue
+
+    try:
+        os.remove(f)
+        deleted_count += 1
+        logger.info("%s silindi / deleted", f)
+    except IsADirectoryError:
+        skipped_count += 1
+        logger.warning("%s bir klasör, atlandı / is a directory, skipped", f)
+    except PermissionError as e:
+        failed_items.append((f, e))
+        logger.error("%s izin hatası / permission denied: %s", f, e)
+    except OSError as e:
+        failed_items.append((f, e))
+        logger.error("%s silinemedi / could not delete: %s", f, e)
+
+logger.info(
+    "Özet / Summary: %d silindi / deleted, %d atlandı / skipped, %d başarısız / failed",
+    deleted_count,
+    skipped_count,
+    len(failed_items),
+)
+
+if failed_items:
+    logger.error("Başarısız öğeler / Failed items:")
+    for name, err in failed_items:
+        logger.error("  %s: %s", name, err)
+    sys.exit(1)
+
+logger.info("İşlem tamamlandı! / Operation complete!")
