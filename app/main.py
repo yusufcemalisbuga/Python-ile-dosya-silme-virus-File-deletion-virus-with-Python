@@ -102,10 +102,10 @@ async def start_stream(body: dict):
         return {"error": "Stream URL is required"}
 
     # Stop existing stream
+    if processing_task:
+        processing_task.cancel()
     if stream_capture and stream_capture.is_running:
         stream_capture.stop()
-        if processing_task:
-            processing_task.cancel()
 
     # Reset analytics
     if ai_analyzer:
@@ -168,6 +168,8 @@ async def websocket_endpoint(websocket: WebSocket):
             if data == "ping":
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
+        pass
+    finally:
         connected_clients.discard(websocket)
         logger.info(f"Client disconnected. Total clients: {len(connected_clients)}")
 
