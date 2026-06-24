@@ -9,6 +9,17 @@
 # except .py files in the folder it is in!
 # ----------------------------------------------------------
 
-from main import run
+from file_utils import get_target_files, safe_remove
 
-run()
+PROTECTED_EXTENSIONS = {".py"}
+
+
+def run() -> None:
+    targets = get_target_files(".", protected_extensions=PROTECTED_EXTENSIONS)
+    for filepath in targets:
+        safe_remove(filepath)
+    print("İşlem tamamlandı!")
+
+
+if __name__ == "__main__":
+    run()
