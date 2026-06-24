@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time AI Camera Analytics</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎥 Real-Time AI Camera Analytics</h1>
+            <p class="subtitle">Powered by Roboflow AI | Object Detection &amp; Tracking</p>
+            <div class="status-bar">
+                <span class="status-indicator" id="statusIndicator">● Disconnected</span>
+                <span class="mode-badge" id="modeBadge">
+                    {% if has_api_key %}Roboflow API{% else %}Demo Mode{% endif %}
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Panel: Video Feed -->
+            <div class="video-panel">
+                <div class="video-container" id="videoContainer">
+                    <div class="video-placeholder" id="placeholder">
+                        <div class="placeholder-icon">📹</div>
+                        <p>Select a camera stream to start analysis</p>
+                    </div>
+                    <img id="videoFeed" class="video-feed hidden" alt="Live Feed">
+                    <div class="video-overlay" id="videoOverlay">
+                        <span class="fps-counter" id="fpsCounter">0 FPS</span>
+                    </div>
+                </div>
+
+                <!-- Stream Controls -->
+                <div class="controls-panel">
+                    <h3>Camera Source</h3>
+                    <div class="stream-selector">
+                        <select id="streamSelect">
+                            {% for stream in streams %}
+                            <option value="{{ stream.url }}" data-type="{{ stream.type }}">
+                                {{ stream.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" id="customUrl" class="custom-url hidden"
+                               placeholder="Enter stream URL (RTSP, MJPEG, HTTP)...">
+                    </div>
+                    <div class="control-buttons">
+                        <button id="startBtn" class="btn btn-start" onclick="startStream()">
+                            ▶ Start Analysis
+                        </button>
+                        <button id="stopBtn" class="btn btn-stop" onclick="stopStream()" disabled>
+                            ⏹ Stop
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Analytics -->
+            <div class="analytics-panel">
+                <!-- Real-time Counts -->
+                <div class="panel-section">
+                    <h3>🔍 Live Detections</h3>
+                    <div class="detection-grid" id="detectionGrid">
+                        <div class="detection-card">
+                            <div class="detection-icon">👤</div>
+                            <div class="detection-count" id="countPerson">0</div>
+                            <div class="detection-label">People</div>
+                        </div>
+                        <div class="detection-card">
+                            <div class="detection-icon">🚗</div>
+                            <div class="detection-count" id="countCar">0</div>
+                            <div class="detection-label">Cars</div>
+                        </div>
+                        <div class="detection-card">
+                            <div class="detection-icon">🚌</div>
+                            <div class="detection-count" id="countBus">0</div>
+                            <div class="detection-label">Buses</div>
+                        </div>
+                        <div class="detection-card">
+                            <div class="detection-icon">🚲</div>
+                            <div class="detection-count" id="countBicycle">0</div>
+                            <div class="detection-label">Bicycles</div>
+                        </div>
+                        <div class="detection-card">
+                            <div class="detection-icon">🏍️</div>
+                            <div class="detection-count" id="countMotorcycle">0</div>
+                            <div class="detection-label">Motorcycles</div>
+                        </div>
+                        <div class="detection-card">
+                            <div class="detection-icon">🚚</div>
+                            <div class="detection-count" id="countTruck">0</div>
+                            <div class="detection-label">Trucks</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Summary -->
+                <div class="panel-section">
+                    <h3>📊 Analytics</h3>
+                    <div class="analytics-stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Total Detections:</span>
+                            <span class="stat-value" id="totalDetections">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Avg per Frame:</span>
+                            <span class="stat-value" id="avgPerFrame">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Frames Analyzed:</span>
+                            <span class="stat-value" id="framesAnalyzed">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Active Tracks:</span>
+                            <span class="stat-value" id="activeTracks">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Stream FPS:</span>
+                            <span class="stat-value" id="streamFps">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detection Log -->
+                <div class="panel-section">
+                    <h3>📋 Detection Log</h3>
+                    <div class="detection-log" id="detectionLog">
+                        <div class="log-entry log-info">System ready. Select a stream to begin.</div>
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="panel-section">
+                    <h3>⚙️ Settings</h3>
+                    <div class="settings-form">
+                        <div class="setting-row">
+                            <label>Confidence Threshold:</label>
+                            <input type="range" id="confidenceSlider" min="10" max="95" value="40"
+                                   oninput="updateConfidence(this.value)">
+                            <span id="confidenceValue">40%</span>
+                        </div>
+                        <div class="setting-row">
+                            <label>Roboflow API Key:</label>
+                            <input type="password" id="apiKeyInput"
+                                   placeholder="Enter API key for full AI mode..."
+                                   value="{{ 'Set' if has_api_key else '' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with FastAPI + OpenCV + Roboflow AI | Real-time object detection on public camera streams</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
