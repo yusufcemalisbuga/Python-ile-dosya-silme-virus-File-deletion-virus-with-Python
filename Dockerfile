@@ -12,12 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install yt-dlp for YouTube stream support
 RUN pip install --no-cache-dir yt-dlp
 
-# Copy and install Python dependencies
-COPY pyproject.toml .
-RUN pip install --no-cache-dir -e .
-
 # Copy application code
 COPY . .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir .
 
 # Expose port
 EXPOSE 8000

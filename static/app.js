@@ -4,6 +4,7 @@
  */
 
 let ws = null;
+let pingInterval = null;
 let isStreaming = false;
 let frameCount = 0;
 let lastFpsUpdate = Date.now();
@@ -39,6 +40,11 @@ function setupStreamSelector() {
 }
 
 function connectWebSocket() {
+    if (pingInterval) {
+        clearInterval(pingInterval);
+        pingInterval = null;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws`;
 
@@ -47,8 +53,7 @@ function connectWebSocket() {
     ws.onopen = () => {
         updateStatus('connected', 'Connected');
         addLog('WebSocket connected', 'info');
-        // Start ping interval
-        setInterval(() => {
+        pingInterval = setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send('ping');
             }
@@ -228,6 +233,11 @@ function updateStatus(state, text) {
 
 function updateConfidence(value) {
     document.getElementById('confidenceValue').textContent = `${value}%`;
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confidence: value / 100 }),
+    }).catch(e => console.error('Failed to update confidence:', e));
 }
 
 function addLog(message, type = 'info') {

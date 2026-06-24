@@ -86,7 +86,7 @@ class AIAnalyzer:
             url = f"https://detect.roboflow.com/{self.model_id}/{self.model_version}"
             params = {
                 "api_key": self.api_key,
-                "confidence": int(self.confidence_threshold * 100),
+                "confidence": self.confidence_threshold,
             }
 
             response = requests.post(

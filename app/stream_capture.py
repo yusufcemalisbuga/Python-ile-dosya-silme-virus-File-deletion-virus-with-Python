@@ -88,12 +88,16 @@ class StreamCapture:
         ret, frame = self.cap.read()
         if not ret:
             logger.warning("Failed to read frame, attempting reconnect...")
-            self.stop()
+            # Release capture without clearing is_running to avoid race condition
+            if self.cap is not None:
+                self.cap.release()
+                self.cap = None
             if self.start():
                 ret, frame = self.cap.read()
                 if not ret:
                     return None
             else:
+                self.is_running = False
                 return None
 
         self.frame_count += 1

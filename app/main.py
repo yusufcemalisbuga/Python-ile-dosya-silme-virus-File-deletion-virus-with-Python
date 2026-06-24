@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import json
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -144,6 +145,15 @@ async def get_analytics():
     return {}
 
 
+@app.post("/api/settings")
+async def update_settings(body: dict):
+    """Update runtime settings like confidence threshold."""
+    if ai_analyzer and "confidence" in body:
+        value = float(body["confidence"])
+        ai_analyzer.confidence_threshold = max(0.1, min(0.95, value))
+    return {"status": "updated"}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time frame streaming."""
@@ -181,9 +191,10 @@ async def _process_stream():
                 await asyncio.sleep(0.01)
                 continue
 
-            # Run AI analysis
+            # Run AI analysis in executor to avoid blocking the event loop
             if ai_analyzer:
-                result = ai_analyzer.analyze_frame(frame)
+                loop = asyncio.get_event_loop()
+                result = await loop.run_in_executor(None, ai_analyzer.analyze_frame, frame)
 
                 if not result.get("skipped", False) and connected_clients:
                     # Draw detections on frame
@@ -206,11 +217,9 @@ async def _process_stream():
                     }
 
                     # Broadcast to all connected clients
-                    import json
-
                     msg_str = json.dumps(message)
                     disconnected = set()
-                    for client in connected_clients:
+                    for client in list(connected_clients):
                         try:
                             await client.send_text(msg_str)
                         except Exception:
